@@ -1,0 +1,20 @@
+api.alto-ai.tech {
+    reverse_proxy localhost:8000
+}
+
+# Recommended: header-injection for log access (safer than query tokens)
+logs.alto-ai.tech {
+    reverse_proxy localhost:8000 {
+        # Inject the same token set in .env as LOG_STREAM_TOKEN
+        header_up X-Log-Token "REPLACE_WITH_LOG_STREAM_TOKEN"
+    }
+}
+
+# Alternate: Basic auth (uncomment if you prefer). Use `caddy hash-password` to
+# generate the password hash and replace the example below.
+#logs.alto-ai.tech {
+#    basicauth /* {
+#        admin JDJhJDEwJGlh...replace_with_hash...
+#    }
+#    reverse_proxy localhost:8000
+#}

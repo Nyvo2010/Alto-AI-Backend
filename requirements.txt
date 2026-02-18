@@ -1,0 +1,17 @@
+# API
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+httpx
+aiofiles
+
+# Agent
+mistralai
+groq
+sentence-transformers
+chromadb
+
+# Utilities
+pydantic

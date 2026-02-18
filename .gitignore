@@ -199,6 +199,20 @@ cython_debug/
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
+
+# Project-specific ignores (Alto)
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+data/settings.json
+data/user.json
+data/agent.json
+data/sessions.json
+memory/store/
+logs/alto.log
+alto.pid
 .cursorindexingignore
 
 # Marimo
