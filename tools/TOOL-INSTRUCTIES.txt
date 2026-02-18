@@ -1,0 +1,118 @@
+Kort: instructies voor het toevoegen van een nieuwe tool
+
+1) Wat de server nu doet
+- De API-app (`api/app.py`) heeft een eenvoudige `/health` endpoint en laadt routers (logs).
+- `api/routes/tools.py` is leeg — er is geen standaard tool-endpoint geïmplementeerd.
+- De agent (`agent/server.py`) heeft alleen `/agent/health`.
+
+Conclusie: er is geen vaste tool-JSON in de codebase; definieer een klein manifest en expose een router.
+
+2) Aanbevolen manifest (JSON)
+Gebruik dit als minimale vereiste voor elke tool. Sla op als `manifest.json` in de tool-map.
+
+{
+  "name": "example_tool",
+  "version": "0.1",
+  "description": "Voorbeeld tool die tekst verwerkt",
+  "endpoint": "/tools/example",       # pad op de API
+  "method": "POST",
+  "auth": "none",                    # of "apiKey" / "bearer"
+  "input_schema": {
+    "type": "object",
+    "properties": { "text": { "type": "string" } },
+    "required": ["text"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": { "summary": { "type": "string" } }
+  },
+  "timeout_seconds": 30
+}
+
+3) Voorbeeld tool-structuur
+Maak een map `tools/example_tool/` met deze bestanden:
+
+- `manifest.json` (zoals boven)
+- `app.py` (FastAPI router) — voorbeeldinhoud hieronder
+- `README.txt` korte uitleg
+
+Voorbeeld `tools/example_tool/app.py`:
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+router = APIRouter()
+
+class Input(BaseModel):
+    text: str
+
+class Output(BaseModel):
+    summary: str
+
+@router.post("/tools/example", response_model=Output)
+def run_example(input: Input):
+    if not input.text:
+        raise HTTPException(status_code=400, detail="text is required")
+    # simpele verwerking: returneer de eerste 50 tekens als voorbeeld
+    summary = input.text[:50]
+    return {"summary": summary}
+
+4) Hoe registreer je de tool in de API
+- Optie A (aanbevolen): exporteer een `router` in `tools/<tool>/app.py` en importeer die in `api/routes/tools.py`.
+
+Voorbeeld `api/routes/tools.py` (vereenvoudigd):
+
+from fastapi import APIRouter
+from tools.example_tool.app import router as example_router
+
+router = APIRouter()
+router.include_router(example_router)
+
+# In `api/app.py` voeg je dan `app.include_router(router)` of importeer `api.routes.tools.router`
+
+Opmerking: huidige `api/app.py` includeert routers vanuit `api/routes` — voeg `tools` toe aan die folder eller update `api/app.py`.
+
+5) Advies voor security en validatie
+- Gebruik `input_schema`/Pydantic modellen voor validatie.
+- Voeg auth toe als `apiKey` of `bearer` wanneer de tool gevoelige data verwerkt.
+- Stel `timeout_seconds` in in manifest en zorg dat de endpoint respecteert.
+
+6) Voorbeeld `manifest.json` en `app.py` in kort formaat
+
+manifest.json
+{
+  "name": "example_tool",
+  "version": "0.1",
+  "description": "Voorbeeld tool",
+  "endpoint": "/tools/example",
+  "method": "POST",
+  "auth": "none",
+  "input_schema": {"type":"object","properties":{"text":{"type":"string"}},"required":["text"]},
+  "output_schema": {"type":"object","properties":{"summary":{"type":"string"}}},
+  "timeout_seconds": 30
+}
+
+app.py (kort)
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+router = APIRouter()
+
+class Input(BaseModel):
+    text: str
+
+@router.post("/tools/example")
+def run(input: Input):
+    return {"summary": input.text[:50]}
+
+7) Checklist bij toevoegen
+- Maak `tools/<naam>/manifest.json`.
+- Implementeer `tools/<naam>/app.py` met een `router` of functie.
+- Update `api/routes/tools.py` of `api/app.py` om de router te includen.
+- Voeg tests / curl-voorbeeld toe in `README.txt`.
+
+8) Curl-voorbeeld om te testen:
+
+curl -X POST http://localhost:8000/tools/example -H "Content-Type: application/json" -d '{"text":"Dit is een test van de example tool"}'
+
+Einde.
