@@ -295,6 +295,8 @@ DELETE /settings/{key} — protected
 | Variable | Required | Notes |
 |---|---|---|
 | DEFAULT_TOOL_ENABLED | No | Defaults to `true` for backward compatibility; set to `false` for new installs if you want opt-in enablement. Accepts `true` or `false`. |
+| MISTRAL_MODEL | No | Default Mistral model to use — e.g. `mistral-large-latest`. |
+| GROQ_MODEL | No | Default Groq model to use — e.g. `groq/compound`. |
 
 Document this in `.env.example` and deployment notes.
 

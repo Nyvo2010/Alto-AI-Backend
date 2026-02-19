@@ -1,118 +1,93 @@
-Kort: instructies voor het toevoegen van een nieuwe tool
+# TOOL-INSTRUCTIES — Naming conventions voor settings keys
 
-1) Wat de server nu doet
-- De API-app (`api/app.py`) heeft een eenvoudige `/health` endpoint en laadt routers (logs).
-- `api/routes/tools.py` is leeg — er is geen standaard tool-endpoint geïmplementeerd.
-- De agent (`agent/server.py`) heeft alleen `/agent/health`.
+Doel: geef een eenduidige conventie zodat instellingen die in JSON worden opgeslagen dezelfde, voorspelbare keys hebben.
 
-Conclusie: er is geen vaste tool-JSON in de codebase; definieer een klein manifest en expose een router.
+Belangrijkste regels
+- Globale vorm: `<integration>.<setting_name>`
+  - `<integration>` is een korte, lower-case identificator (prefix) voor de integratie, bijvoorbeeld:
+    - Discord → `dc` of `discord` (we gebruiken `dc` in voorbeelden hierboven, maar kies één en houd die aan projectbreed)
+    - Trello → `trello`
+    - GitHub → `github`
+    - Slack → `slack`
+    - Notion → `notion`
+    - Filesystem → `fs`
+  - `<setting_name>`: lower_snake_case (a.k.a. lower case with underscores).
+- Gebruik punten (.) om namespaces te maken (integration scope + setting path).
+- Types: bewaar type-informatie niet in de key. Types worden beheerd in schema/validation (bv. JSON Schema).
+- Geen spaties, geen speciale tekens behalve underscore (_) en dot (.).
+- Versie/deprecatie: indien nodig, gebruik suffix `@v2` niet in key zelf — gebruik metadata of migratie-tabellen. Keys moeten stabiel blijven.
+- Wanneer een setting een object of map is, specificeer de key als prefix en gebruik nested JSON:
+  - Voor `trello.lists_by_board`:
+    ```json
+    {
+      "trello": {
+        "lists_by_board": {
+          "board_id_123": ["list_id_a", "list_id_b"]
+        }
+      }
+    }
+    ```
+- Gebruik booleans (`true`/`false`) voor on/off flags; integers voor times/limits; arrays for lists.
 
-2) Aanbevolen manifest (JSON)
-Gebruik dit als minimale vereiste voor elke tool. Sla op als `manifest.json` in de tool-map.
+Conventies en voorbeelden
+- Prefixes (consistente korte identifiers)
+  - Discord: `dc` (example: `dc.allowed_channels`)
+  - Trello: `trello` (example: `trello.allow_create`)
+  - Filesystem: `fs` (example: `fs.write_paths`)
+  - Web/search: `web` or `search` (example: `web.blacklist`)
+  - Images: `img` (example: `img.save_output`)
+- Key examples:
+  - `dc.message_cooldown_seconds` → integer seconds
+  - `trello.default_labels` → array of label names or objects
+  - `web.summarize_results` → boolean
+  - `notion.allowed_pages` → array of page IDs
 
-{
-  "name": "example_tool",
-  "version": "0.1",
-  "description": "Voorbeeld tool die tekst verwerkt",
-  "endpoint": "/tools/example",       # pad op de API
-  "method": "POST",
-  "auth": "none",                    # of "apiKey" / "bearer"
-  "input_schema": {
-    "type": "object",
-    "properties": { "text": { "type": "string" } },
-    "required": ["text"]
-  },
-  "output_schema": {
-    "type": "object",
-    "properties": { "summary": { "type": "string" } }
-  },
-  "timeout_seconds": 30
-}
+Schema / Validation
+- Hanteer JSON Schema of Pydantic/Marshmallow/etc in backend om:
+  - Type checks
+  - Required/optional flags
+  - Default values
+  - Allowed values/ranges
+- Sla instellingen op in eenduidig JSON-object per integratie of in één centrale settings-object:
+  - Centrale vorm (voorbeeld):
+    ```json
+    {
+      "dc": {
+        "allowed_servers": ["123", "456"],
+        "message_cooldown_seconds": 5,
+        "moderation_filter_enabled": true
+      },
+      "trello": {
+        "boards": ["boardA", "boardB"]
+      }
+    }
+    ```
 
-3) Voorbeeld tool-structuur
-Maak een map `tools/example_tool/` met deze bestanden:
+Naming decisions to make (choose one project-wide and document it)
+- Short prefix vs full name (e.g., `dc` vs `discord`) — het is aan te raden één keuze te maken voor het hele project.
+- Gebruik underscore-separated words (`lower_snake_case`) voor setting names.
+- Gebruik dot-separated namespace for integration scoping.
 
-- `manifest.json` (zoals boven)
-- `app.py` (FastAPI router) — voorbeeldinhoud hieronder
-- `README.txt` korte uitleg
+Migration guidance
+- Als keys moeten veranderen:
+  - Voeg nieuwe key naast oude key met de nieuwe naam en markeer oude key als deprecated in metadata.
+  - Voeg een migratie-script die oude keys naar nieuwe keys kopieert.
+  - Houd backward compatibility voor minimaal één release.
 
-Voorbeeld `tools/example_tool/app.py`:
+Praktische tips voor implementatie
+- Maak een centraal bestand (YAML/JSON) met de default settings + keys (kan automatisch dienen als single source of truth).
+- Gebruik die bron om frontend en backend te genereren of te valideren (documentatie, forms, UI labels).
+- Documenteer human-readable labels en descriptions naast keys (voor UI).
+- Schrijf tests die checken of alle keys voldoen aan conventie (regex: `^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$`).
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+Kort voorbeeld van key-to-UI mapping
+- key: `dc.allowed_channels`
+- label: "Toegestane channels"
+- type: array of strings (channel IDs)
+- description: "Lijst met Discord channel IDs waar de bot mag posten"
 
-router = APIRouter()
+---
 
-class Input(BaseModel):
-    text: str
-
-class Output(BaseModel):
-    summary: str
-
-@router.post("/tools/example", response_model=Output)
-def run_example(input: Input):
-    if not input.text:
-        raise HTTPException(status_code=400, detail="text is required")
-    # simpele verwerking: returneer de eerste 50 tekens als voorbeeld
-    summary = input.text[:50]
-    return {"summary": summary}
-
-4) Hoe registreer je de tool in de API
-- Optie A (aanbevolen): exporteer een `router` in `tools/<tool>/app.py` en importeer die in `api/routes/tools.py`.
-
-Voorbeeld `api/routes/tools.py` (vereenvoudigd):
-
-from fastapi import APIRouter
-from tools.example_tool.app import router as example_router
-
-router = APIRouter()
-router.include_router(example_router)
-
-# In `api/app.py` voeg je dan `app.include_router(router)` of importeer `api.routes.tools.router`
-
-Opmerking: huidige `api/app.py` includeert routers vanuit `api/routes` — voeg `tools` toe aan die folder eller update `api/app.py`.
-
-5) Advies voor security en validatie
-- Gebruik `input_schema`/Pydantic modellen voor validatie.
-- Voeg auth toe als `apiKey` of `bearer` wanneer de tool gevoelige data verwerkt.
-- Stel `timeout_seconds` in in manifest en zorg dat de endpoint respecteert.
-
-6) Voorbeeld `manifest.json` en `app.py` in kort formaat
-
-manifest.json
-{
-  "name": "example_tool",
-  "version": "0.1",
-  "description": "Voorbeeld tool",
-  "endpoint": "/tools/example",
-  "method": "POST",
-  "auth": "none",
-  "input_schema": {"type":"object","properties":{"text":{"type":"string"}},"required":["text"]},
-  "output_schema": {"type":"object","properties":{"summary":{"type":"string"}}},
-  "timeout_seconds": 30
-}
-
-app.py (kort)
-from fastapi import APIRouter
-from pydantic import BaseModel
-
-router = APIRouter()
-
-class Input(BaseModel):
-    text: str
-
-@router.post("/tools/example")
-def run(input: Input):
-    return {"summary": input.text[:50]}
-
-7) Checklist bij toevoegen
-- Maak `tools/<naam>/manifest.json`.
-- Implementeer `tools/<naam>/app.py` met een `router` of functie.
-- Update `api/routes/tools.py` of `api/app.py` om de router te includen.
-- Voeg tests / curl-voorbeeld toe in `README.txt`.
-
-8) Curl-voorbeeld om te testen:
-
-curl -X POST http://localhost:8000/tools/example -H "Content-Type: application/json" -d '{"text":"Dit is een test van de example tool"}'
-
-Einde.
+Als je wilt, kan ik:
+- 1) Pushen van deze twee markdown bestanden naar een branch in één van de repositories (maak eerst een branch aan en ik kan een PR voorbereiden), of
+- 2) Genereer JSON Schema / Pydantic models op basis van de keys hierboven om validatie in de backend te implementeren.
