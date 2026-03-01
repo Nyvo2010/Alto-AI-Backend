@@ -1,0 +1,53 @@
+{
+  "id": "discord",
+  "name": "Discord",
+  "description": "Send and receive Discord messages. Triggers on @alto mentions.",
+  "version": "1.0.0",
+  "active_when": ["discord__bot_token", "discord__allowed_user_ids"],
+  "trigger": {
+    "description": "A Discord message that mentions Alto or replies to Alto.",
+    "context_key": "discord__channel_id"
+  },
+  "oauth": null,
+  "agent_schema": {
+    "functions": [
+      {
+        "name": "discord_send_message",
+        "description": "Send a message to a Discord channel.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "channel_id": {
+              "type": "string",
+              "description": "The Discord channel ID to send the message to."
+            },
+            "content": {
+              "type": "string",
+              "description": "The message content to send."
+            }
+          },
+          "required": ["channel_id", "content"]
+        }
+      }
+    ]
+  },
+  "settings_schema": [
+    {
+      "key": "discord__bot_token",
+      "label": "Bot Token",
+      "type": "secret",
+      "source": "env",
+      "env_var": "DISCORD_BOT_TOKEN",
+      "description": "Discord bot token. Set in server .env file.",
+      "required_for_activation": true
+    },
+    {
+      "key": "discord__allowed_user_ids",
+      "label": "Allowed User IDs",
+      "type": "string_array",
+      "source": "settings",
+      "description": "Discord user IDs that can trigger Alto.",
+      "required_for_activation": true
+    }
+  ]
+}

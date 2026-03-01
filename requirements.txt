@@ -10,8 +10,7 @@ aiofiles
 # Agent
 mistralai
 groq
-sentence-transformers
-chromadb
+discord.py
 
 # Utilities
 pydantic
