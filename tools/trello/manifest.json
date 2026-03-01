@@ -1,0 +1,49 @@
+{
+  "id": "trello",
+  "name": "Trello",
+  "description": "Monitors Trello for cards mentioning @alto.",
+  "version": "1.0.0",
+  "active_when": ["trello__api_key", "trello__api_token", "trello__board_id"],
+  "trigger": {
+    "description": "A Trello card whose name contains @alto.",
+    "context_key": "trello__board_id"
+  },
+  "oauth": null,
+  "agent_schema": null,
+  "settings_schema": [
+    {
+      "key": "trello__api_key",
+      "label": "API Key",
+      "type": "secret",
+      "source": "env",
+      "env_var": "TRELLO_API_KEY",
+      "description": "Trello API key. Set in server .env file.",
+      "required_for_activation": true
+    },
+    {
+      "key": "trello__api_token",
+      "label": "API Token",
+      "type": "secret",
+      "source": "env",
+      "env_var": "TRELLO_API_TOKEN",
+      "description": "Trello API token. Set in server .env file.",
+      "required_for_activation": true
+    },
+    {
+      "key": "trello__board_id",
+      "label": "Board ID",
+      "type": "string",
+      "source": "settings",
+      "description": "The Trello board ID to monitor.",
+      "required_for_activation": true
+    },
+    {
+      "key": "trello__poll_interval",
+      "label": "Poll Interval (seconds)",
+      "type": "integer",
+      "source": "settings",
+      "description": "How often to check for new cards (default 30).",
+      "required_for_activation": false
+    }
+  ]
+}
