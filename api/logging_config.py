@@ -9,26 +9,16 @@ LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 
 
 class JSONFormatter(logging.Formatter):
-    """Formats every log record as a single-line JSON object.
-
-    This is intended for log files and other machine‑consumable outputs.
-    We include additional record metadata so that the entry can be filtered or
-    analysed later (module, filename, line number, etc.).
-    """
+    """Formats every log record as a single-line JSON object."""
 
     def format(self, record: logging.LogRecord) -> str:
-        data: dict[str, object] = {
+        return json.dumps({
             'ts': datetime.now(timezone.utc).isoformat(),
             'level': record.levelname,
             'logger': record.name,
-            'module': record.module,
-            'filename': record.filename,
-            'lineno': record.lineno,
             'msg': record.getMessage(),
-        }
-        if record.exc_info:
-            data['exc'] = self.formatException(record.exc_info)
-        return json.dumps(data)
+            **({'exc': self.formatException(record.exc_info)} if record.exc_info else {}),
+        })
 
 
 def setup_logging() -> None:
@@ -40,15 +30,7 @@ def setup_logging() -> None:
     """
     os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
-    # JSON formatter for persistent logs (file, external collectors)
-    json_formatter = JSONFormatter()
-
-    # human-friendly formatter for console output
-    human_fmt = (
-        "%(asctime)s %(levelname)-8s [%(name)s] %(message)s "
-        "(%(filename)s:%(lineno)d)"
-    )
-    human_formatter = logging.Formatter(human_fmt, datefmt="%Y-%m-%d %H:%M:%S")
+    formatter = JSONFormatter()
 
     # Rotating file — 5 MB max, keep 5 backups
     file_handler = logging.handlers.RotatingFileHandler(
@@ -57,15 +39,14 @@ def setup_logging() -> None:
         backupCount=5,
         encoding='utf-8',
     )
-    file_handler.setFormatter(json_formatter)
+    file_handler.setFormatter(formatter)
 
-    # Stdout uses human formatter so it's easy to read in real time
+    # Stdout
     stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(human_formatter)
+    stream_handler.setFormatter(formatter)
 
     root = logging.getLogger()
-    level = getattr(logging, LOG_LEVEL, logging.INFO)
-    root.setLevel(level)
+    root.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
     root.addHandler(file_handler)
     root.addHandler(stream_handler)
 
