@@ -1,0 +1,137 @@
+{
+  "id": "slack",
+  "name": "Slack",
+  "description": "Send and receive Slack messages. Triggers on @alto mentions or direct messages.",
+  "version": "1.0.0",
+  "active_when": ["slack__bot_token", "slack__workspace_id"],
+  "trigger": {
+    "description": "A Slack message that mentions Alto or is sent via direct message.",
+    "context_key": "slack__channel_id"
+  },
+  "oauth": null,
+  "agent_schema": {
+    "functions": [
+      {
+        "name": "slack_send_message",
+        "description": "Send a message to a Slack channel or user.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "channel_id": {
+              "type": "string",
+              "description": "The Slack channel ID or user ID to send the message to."
+            },
+            "content": {
+              "type": "string",
+              "description": "The message content to send."
+            },
+            "thread_ts": {
+              "type": "string",
+              "description": "Optional timestamp to send message in thread."
+            }
+          },
+          "required": ["channel_id", "content"]
+        }
+      },
+      {
+        "name": "slack_add_reaction",
+        "description": "Add an emoji reaction to a Slack message.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "channel_id": {
+              "type": "string",
+              "description": "The Slack channel ID containing the message."
+            },
+            "timestamp": {
+              "type": "string",
+              "description": "The message timestamp to react to."
+            },
+            "emoji": {
+              "type": "string",
+              "description": "The emoji name to add (without colons)."
+            }
+          },
+          "required": ["channel_id", "timestamp", "emoji"]
+        }
+      }
+    ]
+  },
+  "settings_schema": [
+    {
+      "key": "slack__bot_token",
+      "label": "Bot Token",
+      "type": "secret",
+      "source": "env",
+      "env_var": "SLACK_BOT_TOKEN",
+      "description": "Slack bot token (xoxb-...). Set in server .env file.",
+      "required_for_activation": true
+    },
+    {
+      "key": "slack__workspace_id",
+      "label": "Workspace ID",
+      "type": "string",
+      "source": "env",
+      "env_var": "SLACK_WORKSPACE_ID",
+      "description": "Slack workspace ID (T...). Set in server .env file.",
+      "required_for_activation": true
+    },
+    {
+      "key": "slack__signing_secret",
+      "label": "Signing Secret",
+      "type": "secret",
+      "source": "env",
+      "env_var": "SLACK_SIGNING_SECRET",
+      "description": "Slack signing secret for request verification. Set in server .env file.",
+      "required_for_activation": false
+    },
+    {
+      "key": "slack__allowed_channels",
+      "label": "Allowed Channels",
+      "type": "string_array",
+      "source": "settings",
+      "description": "Slack channel IDs where Alto is allowed to operate.",
+      "required_for_activation": false
+    },
+    {
+      "key": "slack__allowed_users",
+      "label": "Allowed Users",
+      "type": "string_array",
+      "source": "settings",
+      "description": "Slack user IDs that can trigger Alto.",
+      "required_for_activation": false
+    },
+    {
+      "key": "slack__message_cooldown_seconds",
+      "label": "Message Cooldown (seconds)",
+      "type": "integer",
+      "source": "settings",
+      "description": "Seconds to wait between messages.",
+      "required_for_activation": false
+    },
+    {
+      "key": "slack__thread_replies_enabled",
+      "label": "Thread Replies",
+      "type": "boolean",
+      "source": "settings",
+      "description": "Allow Alto to reply in threads.",
+      "required_for_activation": false
+    },
+    {
+      "key": "slack__reactions_enabled",
+      "label": "Emoji Reactions",
+      "type": "boolean",
+      "source": "settings",
+      "description": "Allow Alto to add emoji reactions.",
+      "required_for_activation": false
+    },
+    {
+      "key": "slack__error_channel",
+      "label": "Error Channel",
+      "type": "string",
+      "source": "settings",
+      "description": "Channel ID for error messages.",
+      "required_for_activation": false
+    }
+  ]
+}
