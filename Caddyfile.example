@@ -1,11 +1,9 @@
 api.alto-ai.tech {
-    @slack path /slack/*
-    handle @slack {
-        reverse_proxy localhost:3000
-    }
-    handle {
-        reverse_proxy localhost:8000
-    }
+    reverse_proxy localhost:8000
+}
+
+slack.alto-ai.tech {
+    reverse_proxy localhost:3000
 }
 
 # Recommended: header-injection for log access (safer than query tokens)
