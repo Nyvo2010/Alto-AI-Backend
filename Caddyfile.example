@@ -1,4 +1,5 @@
 api.alto-ai.tech {
+    reverse_proxy /slack/* localhost:3000
     reverse_proxy localhost:8000
 }
 
