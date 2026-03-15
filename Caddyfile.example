@@ -7,7 +7,7 @@ api.alto-ai.tech {
 logs.alto-ai.tech {
     reverse_proxy localhost:8000 {
         # Inject the same token set in .env as LOG_STREAM_TOKEN
-        header_up X-Log-Token "REPLACE_WITH_LOG_STREAM_TOKEN"
+        header_up X-Log-Token "ALTOAIDEV2009"
     }
 }
 
