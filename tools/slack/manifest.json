@@ -3,7 +3,7 @@
   "name": "Slack",
   "description": "Send and receive Slack messages. Triggers on @alto mentions or direct messages.",
   "version": "1.0.0",
-  "active_when": ["slack__bot_token", "slack__app_token"],
+  "active_when": [],
   "trigger": {
     "description": "A Slack message that mentions Alto or is sent via direct message.",
     "context_key": "slack__channel_id"

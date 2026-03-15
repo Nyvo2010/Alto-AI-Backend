@@ -34,6 +34,12 @@ async def start(pipeline_callback) -> None:
     bot_token = os.getenv("SLACK_BOT_TOKEN", "")
     app_token = os.getenv("SLACK_APP_TOKEN", "")
 
+    logger.info(
+        "Slack env check: SLACK_BOT_TOKEN=%s SLACK_APP_TOKEN=%s",
+        "set" if bot_token else "missing",
+        "set" if app_token else "missing",
+    )
+
     if not bot_token:
         logger.error("SLACK_BOT_TOKEN not set, Slack trigger disabled")
         return
