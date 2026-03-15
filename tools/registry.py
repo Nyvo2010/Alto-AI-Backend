@@ -88,6 +88,7 @@ class ToolRegistry:
         default_enabled = os.getenv("DEFAULT_TOOL_ENABLED", "true").lower() == "true"
         enabled = get_setting(f"{tool_id}__enabled", default_enabled)
         if not enabled:
+            logger.debug("Tool %s disabled via settings", tool_id)
             return False
 
         for key in manifest.active_when:
@@ -96,11 +97,18 @@ class ToolRegistry:
             )
             if schema_entry and schema_entry.get("source") == "env":
                 env_var = schema_entry.get("env_var", "")
-                if not os.getenv(env_var):
+                env_value = os.getenv(env_var)
+                if not env_value:
+                    logger.debug("Tool %s missing required env var: %s", tool_id, env_var)
                     return False
+                logger.debug("Tool %s has %s set", tool_id, env_var)
             else:
-                if not get_setting(key):
+                value = get_setting(key)
+                if not value:
+                    logger.debug("Tool %s missing required setting: %s", tool_id, key)
                     return False
+                logger.debug("Tool %s has setting %s", tool_id, key)
+        logger.info("Tool %s is ACTIVE", tool_id)
         return True
 
     def get_active_tools(self) -> list[ToolManifest]:
