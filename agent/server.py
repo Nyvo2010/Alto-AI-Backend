@@ -31,7 +31,18 @@ async def startup() -> None:
 
 
 async def _start_triggers() -> None:
+    logger.info("Checking tools for triggers...")
+    all_tools = registry.get_all()
+    logger.info("All tools: %s", [t.id for t in all_tools])
+    
+    for tool in all_tools:
+        is_active = registry.is_active(tool.id)
+        has_trigger = tool.has_trigger
+        logger.info("Tool %s - active=%s, has_trigger=%s", tool.id, is_active, has_trigger)
+    
     starters = registry.get_trigger_starters()
+    logger.info("Active triggers to start: %s", list(starters.keys()))
+    
     for tool_id, starter in starters.items():
         logger.info("Starting trigger: %s", tool_id)
         asyncio.create_task(_run_trigger(tool_id, starter))

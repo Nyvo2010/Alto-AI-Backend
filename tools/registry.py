@@ -91,13 +91,19 @@ class ToolRegistry:
             logger.debug("Tool %s disabled via settings", tool_id)
             return False
 
+        logger.debug("Checking active_when for tool %s: %s", tool_id, manifest.active_when)
         for key in manifest.active_when:
             schema_entry = next(
                 (s for s in manifest.settings_schema if s["key"] == key), None
             )
-            if schema_entry and schema_entry.get("source") == "env":
+            if not schema_entry:
+                logger.debug("Tool %s: no schema entry for key %s", tool_id, key)
+                return False
+                
+            if schema_entry.get("source") == "env":
                 env_var = schema_entry.get("env_var", "")
                 env_value = os.getenv(env_var)
+                logger.debug("Tool %s checking env var %s=%s", tool_id, env_var, "SET" if env_value else "NOT SET")
                 if not env_value:
                     logger.debug("Tool %s missing required env var: %s", tool_id, env_var)
                     return False
