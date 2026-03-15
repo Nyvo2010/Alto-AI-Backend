@@ -1,11 +1,11 @@
 {
   "id": "slack",
   "name": "Slack",
-  "description": "Send and receive Slack messages. Triggers on @alto mentions or direct messages.",
+  "description": "Send and receive Slack messages. Triggers only on @alto mentions.",
   "version": "1.0.0",
   "active_when": [],
   "trigger": {
-    "description": "A Slack message that mentions Alto or is sent via direct message.",
+    "description": "A Slack message that mentions Alto.",
     "context_key": "slack__channel_id"
   },
   "oauth": null,

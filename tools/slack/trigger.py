@@ -52,19 +52,13 @@ async def start(pipeline_callback) -> None:
         _app = App(token=bot_token)
         _client = _app.client
 
-        @_app.event("message")
-        def handle_message(ack, body, logger):
-            ack()
-            message = body.get("event", {})
-            _schedule_message_handling(message)
-
         @_app.event("app_mention")
         def handle_mention(ack, body, logger):
             ack()
             message = body.get("event", {})
             _schedule_message_handling(message)
 
-        logger.info("Slack app initialized with Socket Mode")
+        logger.info("Slack app initialized with Socket Mode (app_mention only)")
 
         # Start Socket Mode handler in a thread
         def run_slack_socket_mode():
@@ -105,6 +99,10 @@ def _schedule_message_handling(message: dict) -> None:
 
 async def _handle_message_async(message: dict) -> None:
     try:
+        # Only process real user mention events.
+        if message.get("subtype") or message.get("bot_id"):
+            return
+
         user_id = message.get("user")
         channel_id = message.get("channel")
         content = message.get("text", "")
