@@ -1,5 +1,8 @@
 {
   "discord__allowed_user_ids": [
     "480342222538145792"
+  ],
+  "slack__allowed_users": [
+     "U0AKD84LL0M"
   ]
 }
