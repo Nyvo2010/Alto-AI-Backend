@@ -3,7 +3,7 @@
   "name": "Slack",
   "description": "Send and receive Slack messages. Triggers on @alto mentions or direct messages.",
   "version": "1.0.0",
-  "active_when": ["slack__bot_token", "slack__workspace_id"],
+  "active_when": ["slack__bot_token", "slack__signing_secret"],
   "trigger": {
     "description": "A Slack message that mentions Alto or is sent via direct message.",
     "context_key": "slack__channel_id"
@@ -74,7 +74,7 @@
       "source": "env",
       "env_var": "SLACK_WORKSPACE_ID",
       "description": "Slack workspace ID (T...). Set in server .env file.",
-      "required_for_activation": true
+      "required_for_activation": false
     },
     {
       "key": "slack__signing_secret",
@@ -83,7 +83,7 @@
       "source": "env",
       "env_var": "SLACK_SIGNING_SECRET",
       "description": "Slack signing secret for request verification. Set in server .env file.",
-      "required_for_activation": false
+      "required_for_activation": true
     },
     {
       "key": "slack__allowed_channels",
