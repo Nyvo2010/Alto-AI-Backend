@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -11,7 +12,8 @@ from .routes import settings as settings_router
 from .routes import tools as tools_router
 from tools.registry import registry
 
-load_dotenv()
+ROOT_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(dotenv_path=ROOT_DIR / ".env", override=True)
 setup_logging()
 
 app = FastAPI(title="Alto AI Backend")

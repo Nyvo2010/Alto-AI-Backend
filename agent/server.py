@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -9,7 +10,8 @@ from agent.pipeline import handle_message, on_session_expire
 from sessions.manager import sessions
 from tools.registry import registry
 
-load_dotenv()
+ROOT_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(dotenv_path=ROOT_DIR / ".env", override=True)
 
 logger = logging.getLogger(__name__)
 

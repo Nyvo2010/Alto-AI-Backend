@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import os
+from concurrent.futures import Future
+from threading import Thread
 
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -12,6 +14,7 @@ _client = None
 _app = None
 _pipeline_callback = None
 _server_thread = None
+_event_loop: asyncio.AbstractEventLoop | None = None
 
 
 def set_pipeline_callback(callback) -> None:
@@ -24,8 +27,9 @@ def get_client():
 
 
 async def start(pipeline_callback) -> None:
-    global _client, _app, _pipeline_callback, _server_thread
+    global _client, _app, _pipeline_callback, _server_thread, _event_loop
     _pipeline_callback = pipeline_callback
+    _event_loop = asyncio.get_running_loop()
 
     bot_token = os.getenv("SLACK_BOT_TOKEN", "")
     app_token = os.getenv("SLACK_APP_TOKEN", "")
@@ -46,13 +50,13 @@ async def start(pipeline_callback) -> None:
         def handle_message(ack, body, logger):
             ack()
             message = body.get("event", {})
-            asyncio.create_task(_handle_message_async(message))
+            _schedule_message_handling(message)
 
         @_app.event("app_mention")
         def handle_mention(ack, body, logger):
             ack()
             message = body.get("event", {})
-            asyncio.create_task(_handle_message_async(message))
+            _schedule_message_handling(message)
 
         logger.info("Slack app initialized with Socket Mode")
 
@@ -65,13 +69,32 @@ async def start(pipeline_callback) -> None:
             except Exception:
                 logger.exception("Slack Socket Mode handler failed")
 
-        from threading import Thread
         _server_thread = Thread(target=run_slack_socket_mode, daemon=True)
         _server_thread.start()
         logger.info("Slack Socket Mode handler started in background thread")
 
     except Exception:
         logger.exception("Failed to initialize Slack trigger")
+
+
+def _schedule_message_handling(message: dict) -> None:
+    if _event_loop is None:
+        logger.error("Slack event loop is not initialized; dropping event")
+        return
+
+    # Socket Mode callbacks run in a worker thread; hop back onto the main loop.
+    future: Future = asyncio.run_coroutine_threadsafe(
+        _handle_message_async(message),
+        _event_loop,
+    )
+
+    def _done_callback(done_future: Future) -> None:
+        try:
+            done_future.result()
+        except Exception:
+            logger.exception("Error in scheduled Slack message handling")
+
+    future.add_done_callback(_done_callback)
 
 
 async def _handle_message_async(message: dict) -> None:

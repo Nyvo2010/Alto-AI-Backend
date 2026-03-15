@@ -5,9 +5,27 @@ import os
 from pathlib import Path
 from typing import Any, Callable
 
+from dotenv import dotenv_values
+
 logger = logging.getLogger(__name__)
 
 TOOLS_DIR = Path(__file__).resolve().parent
+ROOT_DIR = TOOLS_DIR.parent
+ENV_FILE = ROOT_DIR / ".env"
+
+
+def _get_env_value(name: str) -> str:
+    value = os.getenv(name)
+    if value:
+        return value
+
+    if ENV_FILE.exists():
+        env_data = dotenv_values(ENV_FILE)
+        file_value = env_data.get(name)
+        if isinstance(file_value, str) and file_value:
+            return file_value
+
+    return ""
 
 
 class ToolManifest:
@@ -102,7 +120,7 @@ class ToolRegistry:
                 
             if schema_entry.get("source") == "env":
                 env_var = schema_entry.get("env_var", "")
-                env_value = os.getenv(env_var)
+                env_value = _get_env_value(env_var)
                 logger.debug("Tool %s checking env var %s=%s", tool_id, env_var, "SET" if env_value else "NOT SET")
                 if not env_value:
                     logger.debug("Tool %s missing required env var: %s", tool_id, env_var)
