@@ -1,10 +1,9 @@
 import asyncio
 import logging
 import os
-from threading import Thread
 
 from slack_bolt import App
-from slack_bolt.request import BoltRequest
+from slack_bolt.adapter.socket_mode import SocketModeHandler
 from config.store import get as get_setting
 
 logger = logging.getLogger(__name__)
@@ -29,18 +28,18 @@ async def start(pipeline_callback) -> None:
     _pipeline_callback = pipeline_callback
 
     bot_token = os.getenv("SLACK_BOT_TOKEN", "")
-    signing_secret = os.getenv("SLACK_SIGNING_SECRET", "")
+    app_token = os.getenv("SLACK_APP_TOKEN", "")
 
     if not bot_token:
         logger.error("SLACK_BOT_TOKEN not set, Slack trigger disabled")
         return
 
-    if not signing_secret:
-        logger.error("SLACK_SIGNING_SECRET not set, Slack trigger disabled")
+    if not app_token:
+        logger.error("SLACK_APP_TOKEN not set, Slack trigger disabled")
         return
 
     try:
-        _app = App(token=bot_token, signing_secret=signing_secret)
+        _app = App(token=bot_token)
         _client = _app.client
 
         @_app.event("message")
@@ -55,21 +54,21 @@ async def start(pipeline_callback) -> None:
             message = body.get("event", {})
             asyncio.create_task(_handle_message_async(message))
 
-        logger.info("Slack app initialized with webhooks")
+        logger.info("Slack app initialized with Socket Mode")
 
-        # Start Flask/Bolt server in a thread
-        def run_slack_server():
+        # Start Socket Mode handler in a thread
+        def run_slack_socket_mode():
             try:
-                # Default port 3000 for Slack webhook
-                port = os.getenv("SLACK_WEBHOOK_PORT", "3000")
-                logger.info("Starting Slack webhook server on port %s", port)
-                _app.start(port=int(port))
+                logger.info("Starting Slack Socket Mode handler")
+                handler = SocketModeHandler(_app, app_token)
+                handler.start()
             except Exception:
-                logger.exception("Slack webhook server failed")
+                logger.exception("Slack Socket Mode handler failed")
 
-        _server_thread = Thread(target=run_slack_server, daemon=True)
+        from threading import Thread
+        _server_thread = Thread(target=run_slack_socket_mode, daemon=True)
         _server_thread.start()
-        logger.info("Slack webhook server started in background thread")
+        logger.info("Slack Socket Mode handler started in background thread")
 
     except Exception:
         logger.exception("Failed to initialize Slack trigger")
