@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
-TOKEN_EXPIRE_HOURS = 24
+TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", 24))
 USER_FILE = Path(__file__).resolve().parent.parent / "data" / "user.json"
 
 
