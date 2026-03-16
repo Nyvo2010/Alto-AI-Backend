@@ -43,13 +43,16 @@ def _load_user() -> dict | None:
 def login(body: LoginRequest):
     user = _load_user()
     if not user:
-        raise HTTPException(status_code=500, detail="No admin account configured")
+        raise HTTPException(
+            status_code=500,
+            detail="No admin account configured. Run `python -m api.auth setup` (or start.sh) to create one.",
+        )
 
     if body.username != user.get("username"):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid username or password")
 
     if not verify_password(body.password, user.get("password_hash", "")):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid username or password")
 
     token = create_token(subject=body.username)
     logger.info("Login successful for %s", body.username)
