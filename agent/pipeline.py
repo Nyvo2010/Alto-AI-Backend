@@ -52,10 +52,19 @@ async def handle_message(
     if memories:
         memory_text = "\n".join(f"- {m}" for m in memories)
         system_prompt += f"\n\nPrevious context:\n{memory_text}"
-    if context:
-        system_prompt += f"\n\nCurrent context: {json.dumps(context)}"
+    runtime_context = dict(context or {})
+    runtime_context.setdefault("source_app", app)
+    runtime_context.setdefault("source_user_id", user_id)
 
-    response = await _run_reasoning_loop(session, mistral_tools, system_prompt, context)
+    if runtime_context:
+        system_prompt += f"\n\nCurrent context: {json.dumps(runtime_context)}"
+
+    response = await _run_reasoning_loop(
+        session,
+        mistral_tools,
+        system_prompt,
+        runtime_context,
+    )
 
     session.add_message("assistant", response)
     return response
@@ -113,13 +122,16 @@ async def _execute_tool(
     if not executor:
         return {"error": f"No executor for tool: {tool_id}"}
 
+    call_arguments = dict(arguments)
+    call_arguments["function_name"] = function_name
+
     if context:
-        arguments["_context"] = context
+        call_arguments["_context"] = context
 
     try:
         if asyncio.iscoroutinefunction(executor):
-            return await executor(arguments)
-        return await asyncio.to_thread(executor, arguments)
+            return await executor(call_arguments)
+        return await asyncio.to_thread(executor, call_arguments)
     except Exception as e:
         logger.exception("Tool execution failed: %s", function_name)
         return {"error": str(e)}

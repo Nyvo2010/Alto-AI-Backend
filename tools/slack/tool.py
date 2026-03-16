@@ -5,11 +5,14 @@ logger = logging.getLogger(__name__)
 
 async def execute(arguments: dict) -> dict:
     function_name = arguments.get("function_name")
-    
+
     if function_name == "slack_send_message":
         return await slack_send_message(arguments)
     elif function_name == "slack_add_reaction":
         return await slack_add_reaction(arguments)
+    elif function_name is None and arguments.get("content"):
+        # Backward-compatible fallback for callers that omit function_name.
+        return await slack_send_message(arguments)
     else:
         return {"success": False, "error": f"Unknown function: {function_name}"}
 
