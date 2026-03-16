@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -10,8 +9,7 @@ from agent.pipeline import handle_message, on_session_expire
 from sessions.manager import sessions
 from tools.registry import registry
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-load_dotenv(dotenv_path=ROOT_DIR / ".env", override=True)
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -26,25 +24,26 @@ async def startup() -> None:
     registry.scan()
     logger.info("Loaded %d tools", len(registry.get_all()))
 
+    # diagnostic environment info
+    logger.debug("ENV DISCORD_BOT_TOKEN set? %s", bool(os.getenv("DISCORD_BOT_TOKEN")))
+    from config.store import get as get_setting
+    logger.debug("settings discord__allowed_user_ids=%s", get_setting("discord__allowed_user_ids"))
+
     sessions.on_expire(on_session_expire)
     asyncio.create_task(sessions.cleanup_loop())
+
+    # heartbeat log so we can tell if agent is still running
+    async def _heartbeat() -> None:
+        while True:
+            logger.info("Agent heartbeat")
+            await asyncio.sleep(60)
+    asyncio.create_task(_heartbeat())
 
     await _start_triggers()
 
 
 async def _start_triggers() -> None:
-    logger.info("Checking tools for triggers...")
-    all_tools = registry.get_all()
-    logger.info("All tools: %s", [t.id for t in all_tools])
-    
-    for tool in all_tools:
-        is_active = registry.is_active(tool.id)
-        has_trigger = tool.has_trigger
-        logger.info("Tool %s - active=%s, has_trigger=%s", tool.id, is_active, has_trigger)
-    
     starters = registry.get_trigger_starters()
-    logger.info("Active triggers to start: %s", list(starters.keys()))
-    
     for tool_id, starter in starters.items():
         logger.info("Starting trigger: %s", tool_id)
         asyncio.create_task(_run_trigger(tool_id, starter))
