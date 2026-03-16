@@ -15,10 +15,13 @@ router = APIRouter(prefix="/tools", tags=["tools"])
 def list_tools(_user: str = Depends(require_auth)):
     tools = []
     for m in registry.get_all():
+        is_active = registry.is_active(m.id)
         tools.append({
             "id": m.id,
             "name": m.name,
-            "active": registry.is_active(m.id),
+            "enabled": is_active,
+            "status": "connected" if is_active else "disconnected",
+            "active": is_active,  # Include for backward compatibility
             "has_trigger": m.has_trigger,
             "has_tool": m.has_tool,
             "version": m.version,
@@ -32,29 +35,24 @@ def get_tool(tool_id: str, _user: str = Depends(require_auth)):
     if not manifest:
         raise HTTPException(status_code=404, detail="Tool not found")
 
+    settings_values = {}
+    
+    # Process each setting defined in schema
+    # Also include the "enabled" setting which is implicit
     default_enabled = os.getenv("DEFAULT_TOOL_ENABLED", "true").lower() == "true"
     enabled_value = store.get(f"{tool_id}__enabled", default_enabled)
-
-    settings = [
-        {
-            "key": f"{tool_id}__enabled",
-            "label": "Enabled",
-            "type": "boolean",
-            "source": "settings",
-            "description": "Allow Alto to call this integration.",
-            "current_value": enabled_value,
-            "required_for_activation": False,
-        }
-    ]
+    settings_values[f"{tool_id}.enabled"] = enabled_value
 
     for s in manifest.settings_schema:
-        entry = {**s}
-        if s.get("source") == "settings":
-            entry["current_value"] = store.get(s["key"])
-        elif s.get("source") == "env":
-            env_var = s.get("env_var", "")
-            entry["configured"] = bool(os.getenv(env_var))
-        settings.append(entry)
+        if s.get("source") != "settings":
+            continue
+            
+        key = s["key"]
+        val = store.get(key, s.get("default"))
+
+        # Convert key __ to .
+        frontend_key = key.replace("__", ".")
+        settings_values[frontend_key] = val
 
     return {
         "id": manifest.id,
@@ -62,9 +60,7 @@ def get_tool(tool_id: str, _user: str = Depends(require_auth)):
         "description": manifest.description,
         "version": manifest.version,
         "active": registry.is_active(manifest.id),
-        "has_trigger": manifest.has_trigger,
-        "has_tool": manifest.has_tool,
-        "settings": settings,
+        "settings": settings_values,  # Simplified key-value map
     }
 
 

@@ -14,24 +14,47 @@ _KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(__[a-z0-9_]+)*$")
 
 
 class SettingsUpdate(BaseModel):
-    settings: dict
+    settings: dict = {}
 
 
 @router.get("")
 def get_settings(_user: str = Depends(require_auth)):
     data = store.load_all()
-    safe = {k: v for k, v in data.items() if "__token" not in k and "__secret" not in k}
+    # Filter and convert keys
+    safe = {}
+    for k, v in data.items():
+        if "__token" in k or "__secret" in k:
+            continue
+        # Convert __ to . for frontend
+        frontend_key = k.replace("__", ".")
+        safe[frontend_key] = v
     return {"settings": safe}
 
 
 @router.put("")
-def put_settings(body: SettingsUpdate, _user: str = Depends(require_auth)):
-    for key in body.settings:
-        if not _valid_key(key):
-            raise HTTPException(status_code=400, detail=f"Invalid key: {key}")
+def put_settings(body: dict, _user: str = Depends(require_auth)):
+    # Flatten if wrapped in "settings" key, though check if it is direct.
+    # The requirement says body is the settings object.
+    # Use body directly.
+    settings_to_update = body
+    
+    # Check if 'settings' key wraps the actual settings (common pattern compatibility)
+    if "settings" in body and isinstance(body["settings"], dict) and len(body) == 1:
+        settings_to_update = body["settings"]
 
-    updated = store.put(body.settings)
-    return {"updated": updated}
+    # Convert dot notation to double underscore for backend storage
+    mapped_settings = {}
+    for key, value in settings_to_update.items():
+        backend_key = key.replace(".", "__")
+        if not _valid_key(backend_key):
+             # Allow loose keys if pattern doesn't match but log/warn?
+             # For now, stick to validation.
+             if not _KEY_PATTERN.match(backend_key):
+                 raise HTTPException(status_code=400, detail=f"Invalid key format: {key}")
+        mapped_settings[backend_key] = value
+
+    store.put(mapped_settings)
+    return {"success": True, "message": "Settings saved successfully"}
 
 
 @router.delete("/{key}")

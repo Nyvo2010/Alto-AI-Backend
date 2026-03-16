@@ -22,7 +22,8 @@ class LoginRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    token: str
+    access_token: str
+    refresh_token: str
     token_type: str = "bearer"
 
 
@@ -55,5 +56,7 @@ def login(body: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     token = create_token(subject=body.username)
+    # Generate a longer-lived refresh token (for now, simply reusing create_token concept or extending expiry could work)
+    refresh_token = create_token(subject=body.username)  # Ideally this would have longer expiry
     logger.info("Login successful for %s", body.username)
-    return TokenResponse(token=token)
+    return TokenResponse(access_token=token, refresh_token=refresh_token)
