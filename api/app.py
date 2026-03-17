@@ -18,15 +18,32 @@ setup_logging()
 
 app = FastAPI(title="Alto AI Backend")
 
-origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
-if origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+raw_origins = os.getenv("CORS_ORIGINS", "")
+origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+
+# Always allow common local webapp dev servers. Keep explicit .env origins too.
+default_dev_origins = [
+    "http://localhost:3000",
+    "http://localhost:4173",
+    "http://localhost:5173",
+    "http://localhost:5500",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:4173",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5500",
+]
+
+# De-duplicate while preserving input order.
+origins = list(dict.fromkeys(origins + default_dev_origins))
+
+allow_all_origins = "*" in origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"] if allow_all_origins else origins,
+    allow_credentials=not allow_all_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router.router)
 app.include_router(settings_router.router)
