@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -19,27 +20,50 @@ setup_logging()
 app = FastAPI(title="Alto AI Backend")
 
 raw_origins = os.getenv("CORS_ORIGINS", "")
-origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+
+
+def _parse_origins(raw_value: str) -> list[str]:
+    # Accept comma/semicolon/whitespace separators and normalize trailing slash.
+    parts = re.split(r"[,;\s]+", raw_value or "")
+    cleaned: list[str] = []
+    for origin in parts:
+        value = origin.strip().rstrip("/")
+        if value:
+            cleaned.append(value)
+    return cleaned
+
+
+origins = _parse_origins(raw_origins)
 
 # Always allow common local webapp dev servers. Keep explicit .env origins too.
 default_dev_origins = [
     "http://localhost:3000",
+    "https://localhost:3000",
     "http://localhost:4173",
+    "https://localhost:4173",
     "http://localhost:5173",
+    "https://localhost:5173",
     "http://localhost:5500",
+    "https://localhost:5500",
     "http://127.0.0.1:3000",
+    "https://127.0.0.1:3000",
     "http://127.0.0.1:4173",
+    "https://127.0.0.1:4173",
     "http://127.0.0.1:5173",
+    "https://127.0.0.1:5173",
     "http://127.0.0.1:5500",
+    "https://127.0.0.1:5500",
 ]
 
 # De-duplicate while preserving input order.
 origins = list(dict.fromkeys(origins + default_dev_origins))
 
 allow_all_origins = "*" in origins
+origin_regex = os.getenv("CORS_ORIGIN_REGEX", r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"] if allow_all_origins else origins,
+    allow_origin_regex=None if allow_all_origins else origin_regex,
     allow_credentials=not allow_all_origins,
     allow_methods=["*"],
     allow_headers=["*"],
