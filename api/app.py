@@ -18,15 +18,19 @@ setup_logging()
 
 app = FastAPI(title="Alto AI Backend")
 
-origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
-if origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# Allow calls from the console frontend by default (can be overridden via env var)
+origins_env = os.getenv("CORS_ORIGINS", "").strip()
+origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+if not origins:
+    origins = ["https://console.alto-ai.tech"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router.router)
 app.include_router(settings_router.router)
